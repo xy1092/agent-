@@ -1,0 +1,154 @@
+package dev.agentone.ui.pages.reminders
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import dev.agentone.AgentOneApp
+import dev.agentone.core.model.ReminderEntity
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.UUID
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RemindersPage() {
+    val db = AgentOneApp.instance.database
+    val reminderDao = db.reminderDao()
+    var showAddDialog by remember { mutableStateOf(false) }
+
+    val reminders = remember { mutableStateOf<List<ReminderEntity>>(emptyList()) }
+
+    fun loadReminders() {
+        reminders.value = runBlocking { reminderDao.observeAll().first() }
+    }
+
+    if (reminders.value.isEmpty()) loadReminders()
+
+    Scaffold(
+        topBar = { TopAppBar(title = { Text("Reminders") }) },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showAddDialog = true }) {
+                Icon(Icons.Filled.Add, contentDescription = "Add Reminder")
+            }
+        }
+    ) { padding ->
+        val list = reminders.value
+        if (list.isEmpty()) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("No reminders")
+            }
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+                items(list, key = { it.id }) { reminder ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = reminder.completed,
+                                onCheckedChange = {
+                                    runBlocking { reminderDao.setCompleted(reminder.id, it) }
+                                    loadReminders()
+                                }
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(reminder.title, style = MaterialTheme.typography.titleMedium)
+                                reminder.note?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                                reminder.dueAt?.let { due ->
+                                    val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                                    Text("Due: ${fmt.format(Date(due))}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            IconButton(onClick = {
+                                runBlocking { reminderDao.deleteById(reminder.id) }
+                                loadReminders()
+                            }) {
+                                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showAddDialog) {
+        var title by remember { mutableStateOf("") }
+        var note by remember { mutableStateOf("") }
+        var dueInMinutes by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showAddDialog = false },
+            title = { Text("New Reminder") },
+            text = {
+                Column {
+                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") })
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(value = note, onValueChange = { note = it }, label = { Text("Note") })
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(value = dueInMinutes, onValueChange = { dueInMinutes = it }, label = { Text("Due in (minutes, optional)") })
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (title.isNotBlank()) {
+                        val dueAt = dueInMinutes.toLongOrNull()?.let { System.currentTimeMillis() + it * 60 * 1000L }
+                        val reminder = ReminderEntity(
+                            id = UUID.randomUUID().toString(),
+                            title = title,
+                            note = note.ifBlank { null },
+                            dueAt = dueAt
+                        )
+                        runBlocking { reminderDao.upsert(reminder) }
+                        loadReminders()
+                        showAddDialog = false
+                    }
+                }) { Text("Create") }
+            },
+            dismissButton = { TextButton(onClick = { showAddDialog = false }) { Text("Cancel") } }
+        )
+    }
+}
