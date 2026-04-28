@@ -15,7 +15,7 @@ class FakeProvider : Provider {
         request: ChatCompletionRequest,
         config: ProviderConfig
     ): ChatCompletionResult {
-        delay(300)
+        delay(100)
         val lastUserMsg = request.messages.lastOrNull { it.role == MessageRole.USER }?.content ?: ""
         val response = generateFakeResponse(lastUserMsg, request.tools)
         return ChatCompletionResult(

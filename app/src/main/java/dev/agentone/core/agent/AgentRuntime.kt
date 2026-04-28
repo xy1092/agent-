@@ -20,6 +20,8 @@ import dev.agentone.core.tools.RiskLevel
 import dev.agentone.core.tools.ToolAppContext
 import dev.agentone.core.tools.ToolExecutionRequest
 import dev.agentone.core.tools.ToolRegistry
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
@@ -46,7 +48,7 @@ class AgentRuntime(
 
     private var currentRunId: String? = null
     private var currentJob: Job? = null
-    private val pendingApprovals = mutableMapOf<String, List<ToolCall>>()
+    private var approvalDeferred: CompletableDeferred<Set<String>>? = null
 
     companion object {
         const val MAX_STEPS = 8
@@ -149,12 +151,57 @@ class AgentRuntime(
 
                     val toExecute = if (approvalCalls.isNotEmpty()) {
                         _events.emit(AgentEvent.ToolApprovalRequired(approvalCalls))
-                        pendingApprovals[runId] = approvalCalls
                         agentRunDao.upsert(run.copy(state = "waiting_approval", stepCount = step))
-                        // In real usage this suspends until user approves; for now use a safe fallback
-                        return@launch
+
+                        val deferred = CompletableDeferred<Set<String>>()
+                        approvalDeferred = deferred
+                        val approvedIds = deferred.await()
+                        approvalDeferred = null
+
+                        val rejected = approvalCalls.filter { it.id !in approvedIds }
+                        rejected.forEach { tc ->
+                            _events.emit(AgentEvent.ToolRejected(tc.id))
+                            val rejectionMsg = ToolResult(
+                                toolCallId = tc.id, name = tc.name, success = false,
+                                errorCode = "USER_REJECTED", outputText = "User rejected tool execution"
+                            )
+                            _events.emit(AgentEvent.ToolExecutionCompleted(rejectionMsg))
+                        }
+
+                        val approved = approvalCalls.filter { it.id in approvedIds }
+                        agentRunDao.upsert(run.copy(state = "running", stepCount = step))
+                        autoCalls + approved
                     } else {
                         toolCalls
+                    }
+
+                    if (toExecute.isEmpty()) {
+                        val msg = "All tool calls were rejected by user."
+                        messages.add(UnifiedMessage(role = MessageRole.ASSISTANT, content = msg))
+                        messageDao.upsert(
+                            ChatMessage(id = UUID.randomUUID().toString(), sessionId = session.id, role = "assistant", content = msg)
+                        )
+                        _events.emit(AgentEvent.AssistantTextDelta(msg))
+                        isComplete = true
+                        break
+                    }
+
+                    // Save tool_call assistant message with the tool calls
+                    toExecute.forEach { tc ->
+                        messageDao.upsert(
+                            ChatMessage(
+                                id = UUID.randomUUID().toString(), sessionId = session.id, role = "tool_call",
+                                content = tc.argumentsJson, toolName = tc.name, toolCallId = tc.id,
+                                status = "requested"
+                            )
+                        )
+                        messages.add(
+                            UnifiedMessage(
+                                role = MessageRole.ASSISTANT,
+                                content = null,
+                                toolCalls = listOf(tc)
+                            )
+                        )
                     }
 
                     executeToolCalls(toExecute, runId, session.id, messages)
@@ -169,58 +216,27 @@ class AgentRuntime(
 
                 agentRunDao.upsert(run.copy(state = "completed", stepCount = step, finishedAt = System.currentTimeMillis()))
                 _events.emit(AgentEvent.RunCompleted(runId, step))
+            } catch (e: CancellationException) {
+                agentRunDao.upsert(run.copy(state = "cancelled", lastError = "Cancelled", finishedAt = System.currentTimeMillis()))
+                _events.emit(AgentEvent.RunCancelled(runId))
             } catch (e: Exception) {
                 if (isActive) {
                     agentRunDao.upsert(run.copy(state = "failed", lastError = e.message, finishedAt = System.currentTimeMillis()))
                     _events.emit(AgentEvent.RunFailed(runId, e.message ?: "Unknown error"))
                 }
+            } finally {
+                approvalDeferred = null
             }
         }
     }
 
     fun continueAfterApproval(runId: String, approvedCallIds: Set<String>) {
-        val allCalls = pendingApprovals.remove(runId) ?: return
-        val approved = allCalls.filter { it.id in approvedCallIds }
-        val rejected = allCalls.filter { it.id !in approvedCallIds }
-
-        scope.launch {
-            rejected.forEach { tc ->
-                _events.emit(AgentEvent.ToolRejected(tc.id))
-                val rejectionMsg = ToolResult(
-                    toolCallId = tc.id, name = tc.name, success = false,
-                    errorCode = "USER_REJECTED", outputText = "User rejected tool execution"
-                )
-                _events.emit(AgentEvent.ToolExecutionCompleted(rejectionMsg))
-            }
-
-            val run = agentRunDao.getLatest(currentRunId ?: return@launch)
-            if (run != null && approved.isNotEmpty()) {
-                val sessionId = run.sessionId
-                val messages = messageDao.getBySession(sessionId).map { msg ->
-                    UnifiedMessage(
-                        role = when (msg.role) {
-                            "user" -> MessageRole.USER; "assistant" -> MessageRole.ASSISTANT
-                            "system" -> MessageRole.SYSTEM; "tool_call" -> MessageRole.ASSISTANT
-                            "tool_result" -> MessageRole.TOOL; else -> MessageRole.USER
-                        },
-                        content = msg.content
-                    )
-                }.toMutableList()
-
-                executeToolCalls(approved, runId, sessionId, messages)
-                // Continue the run loop
-            }
-        }
+        approvalDeferred?.complete(approvedCallIds)
     }
 
     fun cancelRun() {
         currentJob?.cancel()
         currentJob = null
-        currentRunId?.let { runId ->
-            scope.launch {
-                _events.emit(AgentEvent.RunCancelled(runId))
-            }
-        }
     }
 
     private suspend fun executeToolCalls(
@@ -270,6 +286,4 @@ class AgentRuntime(
         agentStepLogDao.upsert(AgentStepLog(id = UUID.randomUUID().toString(), runId = runId, index = index, type = type, summary = summary))
         _events.emit(AgentEvent.StepLogged(index, summary))
     }
-
-    fun getPendingApprovals(runId: String): List<ToolCall> = pendingApprovals[runId] ?: emptyList()
 }

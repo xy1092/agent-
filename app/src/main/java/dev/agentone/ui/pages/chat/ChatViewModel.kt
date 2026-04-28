@@ -45,6 +45,7 @@ class ChatViewModel(private val sessionId: String) : ViewModel() {
     val replyText: StateFlow<String> = _replyText.asStateFlow()
 
     var agentRuntime: AgentRuntime? = null
+    private var currentRunId: String? = null
 
     init {
         viewModelScope.launch {
@@ -58,7 +59,6 @@ class ChatViewModel(private val sessionId: String) : ViewModel() {
             val session = _session.value ?: return@launch
             val providerConfig = db.providerConfigDao().getById(session.providerId) ?: return@launch
 
-            // Resolve API key from secure storage
             val apiKey = security.getApiKey(session.providerId) ?: ""
             val resolvedConfig = providerConfig.copy(encryptedApiKeyRef = apiKey)
 
@@ -110,7 +110,6 @@ class ChatViewModel(private val sessionId: String) : ViewModel() {
     }
 
     fun regenerateLast() {
-        // Remove last assistant message and resend
         viewModelScope.launch {
             val msgs = _messages.value.toMutableList()
             msgs.removeLastOrNull()
@@ -123,17 +122,18 @@ class ChatViewModel(private val sessionId: String) : ViewModel() {
 
     fun approveTools(approvedIds: Set<String>) {
         _pendingApprovals.value = emptyList()
-        agentRuntime?.continueAfterApproval(sessionId, approvedIds)
+        agentRuntime?.continueAfterApproval(currentRunId ?: "", approvedIds)
     }
 
     fun rejectAllTools() {
         _pendingApprovals.value = emptyList()
-        agentRuntime?.continueAfterApproval(sessionId, emptySet())
+        agentRuntime?.continueAfterApproval(currentRunId ?: "", emptySet())
     }
 
     private fun handleEvent(event: AgentEvent) {
         when (event) {
             is AgentEvent.RunStarted -> {
+                currentRunId = event.runId
                 _isRunning.value = true
                 viewModelScope.launch {
                     db.agentStepLogDao().observeByRun(event.runId).collect { _agentLogs.value = it }
@@ -154,14 +154,17 @@ class ChatViewModel(private val sessionId: String) : ViewModel() {
             is AgentEvent.RunCompleted -> {
                 _isRunning.value = false
                 _replyText.value = ""
+                currentRunId = null
             }
             is AgentEvent.RunFailed -> {
                 _isRunning.value = false
-                _replyText.value = "[Error: ${event.error}]"
+                _replyText.value = "[错误: ${event.error}]"
+                currentRunId = null
             }
             is AgentEvent.RunCancelled -> {
                 _isRunning.value = false
                 _replyText.value = ""
+                currentRunId = null
             }
         }
     }
