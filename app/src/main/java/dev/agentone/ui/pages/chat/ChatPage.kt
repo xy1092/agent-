@@ -109,6 +109,7 @@ fun ChatPage(sessionId: String, onNavigateBack: () -> Unit) {
     val isRunning by viewModel.isRunning.collectAsState()
     val pendingApprovals by viewModel.pendingApprovals.collectAsState()
     val replyText by viewModel.replyText.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
     var inputText by remember { mutableStateOf("") }
     var showLogDrawer by remember { mutableStateOf(false) }
 
@@ -140,6 +141,27 @@ fun ChatPage(sessionId: String, onNavigateBack: () -> Unit) {
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            // Error message banner
+            errorMessage?.let { err ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.errorContainer)
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        err,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    TextButton(onClick = { viewModel.clearError() }) {
+                        Text("关闭", color = MaterialTheme.colorScheme.onErrorContainer)
+                    }
+                }
+            }
+
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 state = listState

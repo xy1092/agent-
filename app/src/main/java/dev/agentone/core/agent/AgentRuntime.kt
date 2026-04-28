@@ -22,13 +22,10 @@ import dev.agentone.core.tools.ToolExecutionRequest
 import dev.agentone.core.tools.ToolRegistry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import java.util.UUID
 
 class AgentRuntime(
@@ -40,7 +37,6 @@ class AgentRuntime(
     private val agentStepLogDao: AgentStepLogDao,
     private val memoryEntryDao: MemoryEntryDao,
     private val appContext: ToolAppContext,
-    private val scope: CoroutineScope,
     private val isAutoApproveLowRisk: () -> Boolean
 ) {
     private val _events = MutableSharedFlow<AgentEvent>(replay = 0, extraBufferCapacity = 256)
@@ -54,7 +50,7 @@ class AgentRuntime(
         const val MAX_STEPS = 8
     }
 
-    fun runAgent(
+    suspend fun runAgent(
         session: ChatSession,
         providerConfig: ProviderConfig,
         userMessage: String
@@ -62,171 +58,170 @@ class AgentRuntime(
         val runId = UUID.randomUUID().toString()
         currentRunId = runId
         val run = AgentRun(id = runId, sessionId = session.id, state = "running")
+        currentJob = kotlin.coroutines.coroutineContext[Job]
 
-        currentJob = scope.launch {
-            agentRunDao.upsert(run)
-            _events.emit(AgentEvent.RunStarted(runId))
-            logStep(runId, 0, "thinking", "Starting agent run with ${session.providerId}/${session.modelId}")
+        agentRunDao.upsert(run)
+        _events.emit(AgentEvent.RunStarted(runId))
+        logStep(runId, 0, "thinking", "Starting agent run with ${session.providerId}/${session.modelId}")
 
-            try {
-                val history = messageDao.getBySession(session.id)
-                val messages = mutableListOf<UnifiedMessage>()
+        try {
+            val history = messageDao.getBySession(session.id)
+            val messages = mutableListOf<UnifiedMessage>()
 
-                val memories = memoryEntryDao.observeAll().first()
+            val memories = memoryEntryDao.observeAll().first()
 
-                val systemPrompt = promptBuilder.buildSystemPrompt(
-                    memories = memories.take(5).map { "[${it.title}]: ${it.content.take(200)}" }
+            val systemPrompt = promptBuilder.buildSystemPrompt(
+                memories = memories.take(5).map { "[${it.title}]: ${it.content.take(200)}" }
+            )
+            messages.add(UnifiedMessage(role = MessageRole.SYSTEM, content = systemPrompt))
+
+            history.forEach { msg ->
+                messages.add(
+                    UnifiedMessage(
+                        role = when (msg.role) {
+                            "user" -> MessageRole.USER
+                            "assistant" -> MessageRole.ASSISTANT
+                            "system" -> MessageRole.SYSTEM
+                            "tool_call" -> MessageRole.ASSISTANT
+                            "tool_result" -> MessageRole.TOOL
+                            else -> MessageRole.USER
+                        },
+                        content = msg.content,
+                        toolCalls = if (msg.role == "tool_call" && msg.toolCallId != null) {
+                            listOf(ToolCall(id = msg.toolCallId, name = msg.toolName ?: "", argumentsJson = msg.content))
+                        } else null,
+                        toolCallId = if (msg.role == "tool_result") msg.toolCallId else null,
+                        name = msg.toolName
+                    )
                 )
-                messages.add(UnifiedMessage(role = MessageRole.SYSTEM, content = systemPrompt))
+            }
 
-                history.forEach { msg ->
+            messages.add(UnifiedMessage(role = MessageRole.USER, content = userMessage))
+            messageDao.upsert(
+                ChatMessage(id = UUID.randomUUID().toString(), sessionId = session.id, role = "user", content = userMessage)
+            )
+
+            val tools = toolRegistry.listByRisk(RiskLevel.MEDIUM).map { it.definition }
+            var step = 0
+            var isComplete = false
+
+            while (step < MAX_STEPS && kotlin.coroutines.coroutineContext[Job]?.isActive != false && !isComplete) {
+                step++
+                logStep(runId, step, "thinking", "Step $step: calling model")
+
+                val provider = providerRegistry.getByTypeString(providerConfig.type)
+                val request = ChatCompletionRequest(
+                    providerType = providerConfig.type,
+                    model = session.modelId,
+                    messages = messages.toList(),
+                    tools = tools.ifEmpty { null },
+                    temperature = 0.7f,
+                    maxTokens = 4096,
+                    stream = false
+                )
+
+                val result = provider.complete(request, providerConfig)
+                val toolCalls = result.requestedToolCalls
+
+                if (toolCalls.isEmpty()) {
+                    val content = result.assistantMessage.content ?: ""
+                    messages.add(UnifiedMessage(role = MessageRole.ASSISTANT, content = content))
+                    messageDao.upsert(
+                        ChatMessage(id = UUID.randomUUID().toString(), sessionId = session.id, role = "assistant", content = content)
+                    )
+                    _events.emit(AgentEvent.AssistantTextDelta(content))
+                    logStep(runId, step, "response", "Assistant responded (${content.length} chars)")
+                    isComplete = true
+                    break
+                }
+
+                _events.emit(AgentEvent.ToolCallRequested(toolCalls))
+                logStep(runId, step, "tool_call", "Requested ${toolCalls.size} tool(s): ${toolCalls.joinToString { it.name }}")
+
+                val (autoCalls, approvalCalls) = toolCalls.partition { tc ->
+                    val risk = toolRegistry.get(tc.name)?.definition?.riskLevel
+                        ?.let { try { RiskLevel.valueOf(it.uppercase()) } catch (_: Exception) { RiskLevel.LOW } }
+                        ?: RiskLevel.LOW
+                    (risk == RiskLevel.LOW || risk == RiskLevel.MEDIUM) && isAutoApproveLowRisk()
+                }
+
+                val toExecute = if (approvalCalls.isNotEmpty()) {
+                    _events.emit(AgentEvent.ToolApprovalRequired(approvalCalls))
+                    agentRunDao.upsert(run.copy(state = "waiting_approval", stepCount = step))
+
+                    val deferred = CompletableDeferred<Set<String>>()
+                    approvalDeferred = deferred
+                    val approvedIds = deferred.await()
+                    approvalDeferred = null
+
+                    val rejected = approvalCalls.filter { it.id !in approvedIds }
+                    rejected.forEach { tc ->
+                        _events.emit(AgentEvent.ToolRejected(tc.id))
+                        val rejectionMsg = ToolResult(
+                            toolCallId = tc.id, name = tc.name, success = false,
+                            errorCode = "USER_REJECTED", outputText = "User rejected tool execution"
+                        )
+                        _events.emit(AgentEvent.ToolExecutionCompleted(rejectionMsg))
+                    }
+
+                    val approved = approvalCalls.filter { it.id in approvedIds }
+                    agentRunDao.upsert(run.copy(state = "running", stepCount = step))
+                    autoCalls + approved
+                } else {
+                    toolCalls
+                }
+
+                if (toExecute.isEmpty()) {
+                    val msg = "All tool calls were rejected by user."
+                    messages.add(UnifiedMessage(role = MessageRole.ASSISTANT, content = msg))
+                    messageDao.upsert(
+                        ChatMessage(id = UUID.randomUUID().toString(), sessionId = session.id, role = "assistant", content = msg)
+                    )
+                    _events.emit(AgentEvent.AssistantTextDelta(msg))
+                    isComplete = true
+                    break
+                }
+
+                toExecute.forEach { tc ->
+                    messageDao.upsert(
+                        ChatMessage(
+                            id = UUID.randomUUID().toString(), sessionId = session.id, role = "tool_call",
+                            content = tc.argumentsJson, toolName = tc.name, toolCallId = tc.id,
+                            status = "requested"
+                        )
+                    )
                     messages.add(
                         UnifiedMessage(
-                            role = when (msg.role) {
-                                "user" -> MessageRole.USER
-                                "assistant" -> MessageRole.ASSISTANT
-                                "system" -> MessageRole.SYSTEM
-                                "tool_call" -> MessageRole.ASSISTANT
-                                "tool_result" -> MessageRole.TOOL
-                                else -> MessageRole.USER
-                            },
-                            content = msg.content,
-                            toolCalls = if (msg.role == "tool_call" && msg.toolCallId != null) {
-                                listOf(ToolCall(id = msg.toolCallId, name = msg.toolName ?: "", argumentsJson = msg.content))
-                            } else null,
-                            toolCallId = if (msg.role == "tool_result") msg.toolCallId else null,
-                            name = msg.toolName
+                            role = MessageRole.ASSISTANT,
+                            content = null,
+                            toolCalls = listOf(tc)
                         )
                     )
                 }
 
-                messages.add(UnifiedMessage(role = MessageRole.USER, content = userMessage))
-                messageDao.upsert(
-                    ChatMessage(id = UUID.randomUUID().toString(), sessionId = session.id, role = "user", content = userMessage)
-                )
-
-                val tools = toolRegistry.listByRisk(RiskLevel.MEDIUM).map { it.definition }
-                var step = 0
-                var isComplete = false
-
-                while (step < MAX_STEPS && isActive && !isComplete) {
-                    step++
-                    logStep(runId, step, "thinking", "Step $step: calling model")
-
-                    val provider = providerRegistry.getByTypeString(providerConfig.type)
-                    val request = ChatCompletionRequest(
-                        providerType = providerConfig.type,
-                        model = session.modelId,
-                        messages = messages.toList(),
-                        tools = tools.ifEmpty { null },
-                        temperature = 0.7f,
-                        maxTokens = 4096,
-                        stream = false
-                    )
-
-                    val result = provider.complete(request, providerConfig)
-                    val toolCalls = result.requestedToolCalls
-
-                    if (toolCalls.isEmpty()) {
-                        val content = result.assistantMessage.content ?: ""
-                        messages.add(UnifiedMessage(role = MessageRole.ASSISTANT, content = content))
-                        messageDao.upsert(
-                            ChatMessage(id = UUID.randomUUID().toString(), sessionId = session.id, role = "assistant", content = content)
-                        )
-                        _events.emit(AgentEvent.AssistantTextDelta(content))
-                        logStep(runId, step, "response", "Assistant responded (${content.length} chars)")
-                        isComplete = true
-                        break
-                    }
-
-                    _events.emit(AgentEvent.ToolCallRequested(toolCalls))
-                    logStep(runId, step, "tool_call", "Requested ${toolCalls.size} tool(s): ${toolCalls.joinToString { it.name }}")
-
-                    val (autoCalls, approvalCalls) = toolCalls.partition { tc ->
-                        val risk = toolRegistry.get(tc.name)?.definition?.riskLevel
-                            ?.let { try { RiskLevel.valueOf(it.uppercase()) } catch (_: Exception) { RiskLevel.LOW } }
-                            ?: RiskLevel.LOW
-                        (risk == RiskLevel.LOW || risk == RiskLevel.MEDIUM) && isAutoApproveLowRisk()
-                    }
-
-                    val toExecute = if (approvalCalls.isNotEmpty()) {
-                        _events.emit(AgentEvent.ToolApprovalRequired(approvalCalls))
-                        agentRunDao.upsert(run.copy(state = "waiting_approval", stepCount = step))
-
-                        val deferred = CompletableDeferred<Set<String>>()
-                        approvalDeferred = deferred
-                        val approvedIds = deferred.await()
-                        approvalDeferred = null
-
-                        val rejected = approvalCalls.filter { it.id !in approvedIds }
-                        rejected.forEach { tc ->
-                            _events.emit(AgentEvent.ToolRejected(tc.id))
-                            val rejectionMsg = ToolResult(
-                                toolCallId = tc.id, name = tc.name, success = false,
-                                errorCode = "USER_REJECTED", outputText = "User rejected tool execution"
-                            )
-                            _events.emit(AgentEvent.ToolExecutionCompleted(rejectionMsg))
-                        }
-
-                        val approved = approvalCalls.filter { it.id in approvedIds }
-                        agentRunDao.upsert(run.copy(state = "running", stepCount = step))
-                        autoCalls + approved
-                    } else {
-                        toolCalls
-                    }
-
-                    if (toExecute.isEmpty()) {
-                        val msg = "All tool calls were rejected by user."
-                        messages.add(UnifiedMessage(role = MessageRole.ASSISTANT, content = msg))
-                        messageDao.upsert(
-                            ChatMessage(id = UUID.randomUUID().toString(), sessionId = session.id, role = "assistant", content = msg)
-                        )
-                        _events.emit(AgentEvent.AssistantTextDelta(msg))
-                        isComplete = true
-                        break
-                    }
-
-                    // Save tool_call assistant message with the tool calls
-                    toExecute.forEach { tc ->
-                        messageDao.upsert(
-                            ChatMessage(
-                                id = UUID.randomUUID().toString(), sessionId = session.id, role = "tool_call",
-                                content = tc.argumentsJson, toolName = tc.name, toolCallId = tc.id,
-                                status = "requested"
-                            )
-                        )
-                        messages.add(
-                            UnifiedMessage(
-                                role = MessageRole.ASSISTANT,
-                                content = null,
-                                toolCalls = listOf(tc)
-                            )
-                        )
-                    }
-
-                    executeToolCalls(toExecute, runId, session.id, messages)
-                }
-
-                if (step >= MAX_STEPS) {
-                    val summary = "Reached maximum steps ($MAX_STEPS). Task may be incomplete."
-                    messageDao.upsert(
-                        ChatMessage(id = UUID.randomUUID().toString(), sessionId = session.id, role = "system", content = summary)
-                    )
-                }
-
-                agentRunDao.upsert(run.copy(state = "completed", stepCount = step, finishedAt = System.currentTimeMillis()))
-                _events.emit(AgentEvent.RunCompleted(runId, step))
-            } catch (e: CancellationException) {
-                agentRunDao.upsert(run.copy(state = "cancelled", lastError = "Cancelled", finishedAt = System.currentTimeMillis()))
-                _events.emit(AgentEvent.RunCancelled(runId))
-            } catch (e: Exception) {
-                if (isActive) {
-                    agentRunDao.upsert(run.copy(state = "failed", lastError = e.message, finishedAt = System.currentTimeMillis()))
-                    _events.emit(AgentEvent.RunFailed(runId, e.message ?: "Unknown error"))
-                }
-            } finally {
-                approvalDeferred = null
+                executeToolCalls(toExecute, runId, session.id, messages)
             }
+
+            if (step >= MAX_STEPS) {
+                val summary = "Reached maximum steps ($MAX_STEPS). Task may be incomplete."
+                messageDao.upsert(
+                    ChatMessage(id = UUID.randomUUID().toString(), sessionId = session.id, role = "system", content = summary)
+                )
+            }
+
+            agentRunDao.upsert(run.copy(state = "completed", stepCount = step, finishedAt = System.currentTimeMillis()))
+            _events.emit(AgentEvent.RunCompleted(runId, step))
+        } catch (e: CancellationException) {
+            agentRunDao.upsert(run.copy(state = "cancelled", lastError = "Cancelled", finishedAt = System.currentTimeMillis()))
+            _events.emit(AgentEvent.RunCancelled(runId))
+        } catch (e: Exception) {
+            if (kotlin.coroutines.coroutineContext[Job]?.isActive != false) {
+                agentRunDao.upsert(run.copy(state = "failed", lastError = e.message, finishedAt = System.currentTimeMillis()))
+                _events.emit(AgentEvent.RunFailed(runId, e.message ?: "Unknown error"))
+            }
+        } finally {
+            approvalDeferred = null
+            currentJob = null
         }
     }
 
