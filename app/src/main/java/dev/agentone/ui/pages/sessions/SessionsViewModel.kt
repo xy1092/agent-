@@ -23,15 +23,17 @@ class SessionsViewModel : ViewModel() {
         }
     }
 
-    fun createSession(providerId: String, modelId: String) {
+    fun createSession(providerId: String, modelId: String, onCreated: (String) -> Unit) {
+        val sessionId = UUID.randomUUID().toString()
         viewModelScope.launch {
             val session = ChatSession(
-                id = UUID.randomUUID().toString(),
+                id = sessionId,
                 title = "New Session",
                 providerId = providerId,
                 modelId = modelId
             )
             db.sessionDao().upsert(session)
+            onCreated(sessionId)
         }
     }
 

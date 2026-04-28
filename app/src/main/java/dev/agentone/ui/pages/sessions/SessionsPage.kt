@@ -53,7 +53,7 @@ import dev.agentone.core.providers.ProviderType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SessionsPage(onSessionClick: (String) -> Unit) {
+fun SessionsPage(onSessionClick: (String) -> Unit, onSessionCreated: (String) -> Unit) {
     val viewModel: SessionsViewModel = viewModel()
     val sessions by viewModel.sessions.collectAsState()
     var showNewDialog by remember { mutableStateOf(false) }
@@ -95,8 +95,10 @@ fun SessionsPage(onSessionClick: (String) -> Unit) {
         NewSessionDialog(
             onDismiss = { showNewDialog = false },
             onCreate = { providerId, modelId ->
-                viewModel.createSession(providerId, modelId)
-                showNewDialog = false
+                viewModel.createSession(providerId, modelId) { newId ->
+                    showNewDialog = false
+                    onSessionCreated(newId)
+                }
             }
         )
     }

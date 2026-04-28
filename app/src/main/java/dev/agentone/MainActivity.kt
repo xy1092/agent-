@@ -95,8 +95,10 @@ fun AgentOneMain() {
             }
 
             composable(Screen.Sessions.route) {
+                val navigateToChat = { sessionId: String -> navController.navigate(SubScreen.Chat.createRoute(sessionId)) }
                 SessionsPage(
-                    onSessionClick = { sessionId -> navController.navigate(SubScreen.Chat.createRoute(sessionId)) }
+                    onSessionClick = navigateToChat,
+                    onSessionCreated = navigateToChat
                 )
             }
 

@@ -13,6 +13,7 @@ import dev.agentone.core.model.ChatSession
 import dev.agentone.core.model.ProviderConfig
 import dev.agentone.core.providers.ToolCall
 import dev.agentone.core.tools.ToolAppContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,7 +57,17 @@ class ChatViewModel(private val sessionId: String) : ViewModel() {
 
     fun sendMessage(text: String) {
         viewModelScope.launch {
-            val session = _session.value ?: return@launch
+            // Wait for session to be loaded (up to 2 seconds)
+            var s = _session.value
+            if (s == null) {
+                var retries = 0
+                while (s == null && retries < 20) {
+                    delay(100)
+                    s = _session.value
+                    retries++
+                }
+            }
+            val session = s ?: return@launch
             val providerConfig = db.providerConfigDao().getById(session.providerId) ?: return@launch
 
             val apiKey = security.getApiKey(session.providerId) ?: ""
