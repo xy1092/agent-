@@ -48,7 +48,7 @@ fun SettingsPage() {
     var apiKeyInput by remember { mutableStateOf("") }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Settings") }) }
+        topBar = { TopAppBar(title = { Text("设置") }) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -58,7 +58,7 @@ fun SettingsPage() {
         ) {
             // Provider API Keys
             Text(
-                "API Keys",
+                "API 密钥",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(16.dp)
             )
@@ -81,7 +81,7 @@ fun SettingsPage() {
                             Text(type.name)
                             val hasKey = security.getApiKey(type.name.lowercase()) != null
                             Text(
-                                if (hasKey) "API Key configured" else "No API Key",
+                                if (hasKey) "已配置" else "未配置",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -94,7 +94,7 @@ fun SettingsPage() {
 
             // Agent settings
             Text(
-                "Agent Settings",
+                "Agent 设置",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(16.dp)
             )
@@ -105,8 +105,8 @@ fun SettingsPage() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Auto-approve low-risk tools")
-                        Text("Read operations run without confirmation", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("自动批准低风险工具")
+                        Text("读取操作无需确认即可执行", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = autoApprove,
@@ -124,8 +124,8 @@ fun SettingsPage() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Memory")
-                        Text("Enable long-term memory storage", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("记忆")
+                        Text("启用长期记忆存储", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = memoryEnabled,
@@ -141,7 +141,7 @@ fun SettingsPage() {
 
             // Data management
             Text(
-                "Data",
+                "数据",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(16.dp)
             )
@@ -153,7 +153,7 @@ fun SettingsPage() {
                     .clickable { showClearDialog = true }
             ) {
                 Text(
-                    "Clear All Data",
+                    "清除所有数据",
                     modifier = Modifier.padding(16.dp),
                     color = MaterialTheme.colorScheme.error
                 )
@@ -168,7 +168,7 @@ fun SettingsPage() {
                 modifier = Modifier.padding(16.dp)
             )
             Text(
-                "Private AI Agent Workspace",
+                "私人 AI Agent 工作空间",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp)
@@ -179,8 +179,8 @@ fun SettingsPage() {
     if (showClearDialog) {
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
-            title = { Text("Clear All Data") },
-            text = { Text("This will delete all sessions, messages, memories, reminders, and settings. This cannot be undone.") },
+            title = { Text("清除所有数据") },
+            text = { Text("这将删除所有会话、消息、记忆、提醒和设置。此操作不可撤销。") },
             confirmButton = {
                 TextButton(onClick = {
                     kotlinx.coroutines.runBlocking {
@@ -188,10 +188,10 @@ fun SettingsPage() {
                     }
                     security.clearAll()
                     showClearDialog = false
-                }) { Text("Clear Everything", color = MaterialTheme.colorScheme.error) }
+                }) { Text("全部清除", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showClearDialog = false }) { Text("取消") }
             }
         )
     }
@@ -199,12 +199,12 @@ fun SettingsPage() {
     showApiKeyDialog?.let { type ->
         AlertDialog(
             onDismissRequest = { showApiKeyDialog = null },
-            title = { Text("API Key: ${type.name}") },
+            title = { Text("API 密钥: ${type.name}") },
             text = {
                 OutlinedTextField(
                     value = apiKeyInput,
                     onValueChange = { apiKeyInput = it },
-                    label = { Text("API Key") },
+                    label = { Text("API 密钥") },
                     singleLine = true
                 )
             },
@@ -216,10 +216,10 @@ fun SettingsPage() {
                         security.deleteApiKey(type.name.lowercase())
                     }
                     showApiKeyDialog = null
-                }) { Text("Save") }
+                }) { Text("保存") }
             },
             dismissButton = {
-                TextButton(onClick = { showApiKeyDialog = null }) { Text("Cancel") }
+                TextButton(onClick = { showApiKeyDialog = null }) { Text("取消") }
             }
         )
     }

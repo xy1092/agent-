@@ -20,13 +20,13 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
-    data object Sessions : Screen("sessions", "Sessions", Icons.Outlined.Chat, Icons.Filled.Chat)
-    data object Browser : Screen("browser", "Browser", Icons.Outlined.Language, Icons.Filled.Language)
-    data object Files : Screen("files", "Files", Icons.Outlined.Folder, Icons.Filled.Folder)
-    data object Calendar : Screen("calendar", "Calendar", Icons.Outlined.CalendarMonth, Icons.Filled.CalendarMonth)
-    data object Reminders : Screen("reminders", "Reminders", Icons.Outlined.Notifications, Icons.Filled.Notifications)
-    data object Memory : Screen("memory", "Memory", Icons.Outlined.Memory, Icons.Filled.Memory)
-    data object Settings : Screen("settings", "Settings", Icons.Outlined.Settings, Icons.Filled.Settings)
+    data object Sessions : Screen("sessions", "会话", Icons.Outlined.Chat, Icons.Filled.Chat)
+    data object Browser : Screen("browser", "浏览器", Icons.Outlined.Language, Icons.Filled.Language)
+    data object Files : Screen("files", "文件", Icons.Outlined.Folder, Icons.Filled.Folder)
+    data object Calendar : Screen("calendar", "日历", Icons.Outlined.CalendarMonth, Icons.Filled.CalendarMonth)
+    data object Reminders : Screen("reminders", "提醒", Icons.Outlined.Notifications, Icons.Filled.Notifications)
+    data object Memory : Screen("memory", "记忆", Icons.Outlined.Memory, Icons.Filled.Memory)
+    data object Settings : Screen("settings", "设置", Icons.Outlined.Settings, Icons.Filled.Settings)
 }
 
 sealed class SubScreen(val route: String) {

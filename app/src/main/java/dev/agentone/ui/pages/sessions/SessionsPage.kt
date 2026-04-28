@@ -62,7 +62,7 @@ fun SessionsPage(onSessionClick: (String) -> Unit) {
         topBar = { TopAppBar(title = { Text("AgentOne") }) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showNewDialog = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "New Session")
+                Icon(Icons.Filled.Add, contentDescription = "新建会话")
             }
         }
     ) { padding ->
@@ -72,8 +72,8 @@ fun SessionsPage(onSessionClick: (String) -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text("No sessions yet", style = MaterialTheme.typography.bodyLarge)
-                Text("Tap + to create one", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("暂无会话", style = MaterialTheme.typography.bodyLarge)
+                Text("点击 + 创建新会话", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -103,16 +103,16 @@ fun SessionsPage(onSessionClick: (String) -> Unit) {
     showDeleteDialog?.let { session ->
         AlertDialog(
             onDismissRequest = { showDeleteDialog = null },
-            title = { Text("Delete Session") },
-            text = { Text("Delete \"${session.title}\"? This cannot be undone.") },
+            title = { Text("删除会话") },
+            text = { Text("确定删除 \"${session.title}\"？此操作不可撤销。") },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteSession(session.id)
                     showDeleteDialog = null
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = null }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteDialog = null }) { Text("取消") }
             }
         )
     }
@@ -154,13 +154,13 @@ fun SessionCard(
             }
             IconButton(onClick = onTogglePin) {
                 Icon(
-                    Icons.Filled.PushPin, contentDescription = "Pin",
+                    Icons.Filled.PushPin, contentDescription = "置顶",
                     tint = if (session.pinned) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                Icon(Icons.Filled.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -200,10 +200,10 @@ fun NewSessionDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New Session") },
+        title = { Text("新建会话") },
         text = {
             Column {
-                Text("Provider", style = MaterialTheme.typography.labelMedium)
+                Text("提供商", style = MaterialTheme.typography.labelMedium)
                 Spacer(modifier = Modifier.height(8.dp))
                 ExposedDropdownMenuBox(
                     expanded = expanded,
@@ -230,7 +230,7 @@ fun NewSessionDialog(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Model", style = MaterialTheme.typography.labelMedium)
+                Text("模型", style = MaterialTheme.typography.labelMedium)
                 Spacer(modifier = Modifier.height(4.dp))
                 defaultModels.forEach { model ->
                     TextButton(onClick = { selectedModel = model }) {
@@ -240,17 +240,17 @@ fun NewSessionDialog(
                 OutlinedTextField(
                     value = customModel,
                     onValueChange = { customModel = it; if (it.isNotBlank()) selectedModel = it },
-                    label = { Text("Or custom model ID") },
+                    label = { Text("或输入自定义模型 ID") },
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     singleLine = true
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = { onCreate(selectedProviderId, selectedModel) }) { Text("Create") }
+            TextButton(onClick = { onCreate(selectedProviderId, selectedModel) }) { Text("创建") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text("取消") }
         }
     )
 }

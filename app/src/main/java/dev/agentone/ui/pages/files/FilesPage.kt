@@ -72,9 +72,9 @@ fun FilesPage() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Files: ${currentPath.name}") },
+                title = { Text("文件: ${currentPath.name}") },
                 actions = {
-                    TextButton(onClick = { showCreateDialog = true }) { Text("New File") }
+                    TextButton(onClick = { showCreateDialog = true }) { Text("新建文件") }
                 }
             )
         }
@@ -88,7 +88,7 @@ fun FilesPage() {
                     }
                     selectedFile = null
                     refreshFiles()
-                }) { Text("Save") }
+                }) { Text("保存") }
                 OutlinedTextField(
                     value = fileContent,
                     onValueChange = { fileContent = it },
@@ -127,11 +127,11 @@ fun FilesPage() {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(entry.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 if (!entry.isDirectory && entry.size > 0) {
-                                    Text("${entry.size} bytes", style = MaterialTheme.typography.bodySmall)
+                                    Text("${entry.size} 字节", style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                             IconButton(onClick = { showDeleteDialog = entry }) {
-                                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                                Icon(Icons.Filled.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -145,12 +145,12 @@ fun FilesPage() {
         var fileContent by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text("Create File") },
+            title = { Text("创建文件") },
             text = {
                 Column {
-                    OutlinedTextField(value = fileName, onValueChange = { fileName = it }, label = { Text("File name") })
+                    OutlinedTextField(value = fileName, onValueChange = { fileName = it }, label = { Text("文件名") })
                     Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(value = fileContent, onValueChange = { fileContent = it }, label = { Text("Content") }, maxLines = 4)
+                    OutlinedTextField(value = fileContent, onValueChange = { fileContent = it }, label = { Text("内容") }, maxLines = 4)
                 }
             },
             confirmButton = {
@@ -160,25 +160,25 @@ fun FilesPage() {
                         refreshFiles()
                         showCreateDialog = false
                     }
-                }) { Text("Create") }
+                }) { Text("创建") }
             },
-            dismissButton = { TextButton(onClick = { showCreateDialog = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showCreateDialog = false }) { Text("取消") } }
         )
     }
 
     showDeleteDialog?.let { entry ->
         AlertDialog(
             onDismissRequest = { showDeleteDialog = null },
-            title = { Text("Delete") },
-            text = { Text("Delete ${entry.name}?") },
+            title = { Text("删除") },
+            text = { Text("确定删除 ${entry.name}？") },
             confirmButton = {
                 TextButton(onClick = {
                     File(entry.path).delete()
                     refreshFiles()
                     showDeleteDialog = null
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showDeleteDialog = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showDeleteDialog = null }) { Text("取消") } }
         )
     }
 }

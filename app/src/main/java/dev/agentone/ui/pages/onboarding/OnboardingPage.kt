@@ -42,8 +42,9 @@ fun OnboardingPage(onComplete: () -> Unit) {
         ProviderType.OPENAI to "OpenAI",
         ProviderType.ANTHROPIC to "Anthropic",
         ProviderType.GEMINI to "Gemini",
+        ProviderType.DEEPSEEK to "DeepSeek",
         ProviderType.OPENROUTER to "OpenRouter",
-        ProviderType.FAKE to "Fake (Test)"
+        ProviderType.FAKE to "Fake (测试)"
     )
 
     var selectedProvider by remember { mutableStateOf(providers.first()) }
@@ -68,7 +69,7 @@ fun OnboardingPage(onComplete: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Welcome to AgentOne",
+            text = "欢迎使用 AgentOne",
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center
         )
@@ -76,7 +77,7 @@ fun OnboardingPage(onComplete: () -> Unit) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Your private AI Agent workspace.\nConfigure at least one provider to get started.",
+            text = "你的私人 AI Agent 工作空间。\n请至少配置一个模型提供商以开始使用。",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -85,7 +86,7 @@ fun OnboardingPage(onComplete: () -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = "Select Provider",
+            text = "选择提供商",
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.fillMaxWidth()
         )
@@ -109,7 +110,7 @@ fun OnboardingPage(onComplete: () -> Unit) {
             OutlinedTextField(
                 value = apiKey,
                 onValueChange = { apiKey = it },
-                label = { Text("API Key for ${selectedProvider.second}") },
+                label = { Text("${selectedProvider.second} 的 API Key") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -128,6 +129,7 @@ fun OnboardingPage(onComplete: () -> Unit) {
                         ProviderType.OPENAI -> "https://api.openai.com"
                         ProviderType.GEMINI -> "https://generativelanguage.googleapis.com"
                         ProviderType.ANTHROPIC -> "https://api.anthropic.com"
+                        ProviderType.DEEPSEEK -> "https://api.deepseek.com"
                         ProviderType.OPENROUTER -> "https://openrouter.ai/api"
                         ProviderType.OPENAI_COMPATIBLE -> ""
                         ProviderType.FAKE -> ""
@@ -146,7 +148,7 @@ fun OnboardingPage(onComplete: () -> Unit) {
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Save & Continue")
+            Text("保存并继续")
         }
 
         if (saved) {
@@ -155,7 +157,7 @@ fun OnboardingPage(onComplete: () -> Unit) {
                 onClick = onComplete,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Go to Sessions")
+                Text("进入会话")
             }
         }
     }

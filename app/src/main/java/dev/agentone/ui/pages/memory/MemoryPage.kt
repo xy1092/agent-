@@ -62,7 +62,7 @@ fun MemoryPage() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Memory") },
+                title = { Text("记忆") },
                 actions = {
                     Text("${if (memoryEnabled) "ON" else "OFF"}")
                     Switch(
@@ -85,12 +85,12 @@ fun MemoryPage() {
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Search memories...") },
+                    placeholder = { Text("搜索记忆...") },
                     singleLine = true
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 IconButton(onClick = { loadEntries() }) {
-                    Icon(Icons.Filled.Search, contentDescription = "Search")
+                    Icon(Icons.Filled.Search, contentDescription = "搜索")
                 }
             }
 
@@ -101,9 +101,9 @@ fun MemoryPage() {
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("No memories found")
+                    Text("未找到记忆")
                     if (!memoryEnabled) {
-                        Text("Memory is disabled", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("记忆功能已禁用", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             } else {
@@ -124,7 +124,7 @@ fun MemoryPage() {
                                         runBlocking { memoryDao.deleteById(entry.id) }
                                         loadEntries()
                                     }) {
-                                        Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                                        Icon(Icons.Filled.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error)
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))

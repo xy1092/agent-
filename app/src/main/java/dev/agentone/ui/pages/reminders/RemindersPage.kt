@@ -61,10 +61,10 @@ fun RemindersPage() {
     if (reminders.value.isEmpty()) loadReminders()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Reminders") }) },
+        topBar = { TopAppBar(title = { Text("提醒") }) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "Add Reminder")
+                Icon(Icons.Filled.Add, contentDescription = "添加提醒")
             }
         }
     ) { padding ->
@@ -75,7 +75,7 @@ fun RemindersPage() {
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("No reminders")
+                Text("暂无提醒")
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -99,14 +99,14 @@ fun RemindersPage() {
                                 reminder.note?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                                 reminder.dueAt?.let { due ->
                                     val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-                                    Text("Due: ${fmt.format(Date(due))}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("截止: ${fmt.format(Date(due))}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                             IconButton(onClick = {
                                 runBlocking { reminderDao.deleteById(reminder.id) }
                                 loadReminders()
                             }) {
-                                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                                Icon(Icons.Filled.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -122,14 +122,14 @@ fun RemindersPage() {
 
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = { Text("New Reminder") },
+            title = { Text("新建提醒") },
             text = {
                 Column {
-                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") })
+                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("标题") })
                     Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(value = note, onValueChange = { note = it }, label = { Text("Note") })
+                    OutlinedTextField(value = note, onValueChange = { note = it }, label = { Text("备注") })
                     Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(value = dueInMinutes, onValueChange = { dueInMinutes = it }, label = { Text("Due in (minutes, optional)") })
+                    OutlinedTextField(value = dueInMinutes, onValueChange = { dueInMinutes = it }, label = { Text("截止时间（分钟，可选）") })
                 }
             },
             confirmButton = {
@@ -146,9 +146,9 @@ fun RemindersPage() {
                         loadReminders()
                         showAddDialog = false
                     }
-                }) { Text("Create") }
+                }) { Text("创建") }
             },
-            dismissButton = { TextButton(onClick = { showAddDialog = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showAddDialog = false }) { Text("取消") } }
         )
     }
 }

@@ -69,14 +69,14 @@ fun ChatPage(sessionId: String, onNavigateBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(session?.title ?: "Chat") },
+                title = { Text(session?.title ?: "聊天") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 },
                 actions = {
-                    TextButton(onClick = { showLogDrawer = !showLogDrawer }) { Text("Log") }
+                    TextButton(onClick = { showLogDrawer = !showLogDrawer }) { Text("日志") }
                 }
             )
         }
@@ -114,7 +114,7 @@ fun ChatPage(sessionId: String, onNavigateBack: () -> Unit) {
                         ) {
                             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Thinking...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("思考中...", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -127,7 +127,7 @@ fun ChatPage(sessionId: String, onNavigateBack: () -> Unit) {
                 OutlinedTextField(
                     value = inputText,
                     onValueChange = { inputText = it },
-                    placeholder = { Text("Type a message...") },
+                    placeholder = { Text("输入消息...") },
                     modifier = Modifier.weight(1f),
                     enabled = !isRunning,
                     maxLines = 4
@@ -135,7 +135,7 @@ fun ChatPage(sessionId: String, onNavigateBack: () -> Unit) {
                 Spacer(modifier = Modifier.width(8.dp))
                 if (isRunning) {
                     IconButton(onClick = { viewModel.stopGeneration() }) {
-                        Icon(Icons.Filled.Stop, contentDescription = "Stop", tint = MaterialTheme.colorScheme.error)
+                        Icon(Icons.Filled.Stop, contentDescription = "停止", tint = MaterialTheme.colorScheme.error)
                     }
                 } else {
                     IconButton(onClick = {
@@ -144,7 +144,7 @@ fun ChatPage(sessionId: String, onNavigateBack: () -> Unit) {
                             inputText = ""
                         }
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "发送")
                     }
                 }
             }
@@ -154,11 +154,11 @@ fun ChatPage(sessionId: String, onNavigateBack: () -> Unit) {
     if (showLogDrawer) {
         AlertDialog(
             onDismissRequest = { showLogDrawer = false },
-            title = { Text("Agent Log") },
+            title = { Text("Agent 日志") },
             text = {
                 val logs by viewModel.agentLogs.collectAsState()
                 if (logs.isEmpty()) {
-                    Text("No log entries yet.")
+                    Text("暂无日志记录。")
                 } else {
                     LazyColumn(modifier = Modifier.height(300.dp)) {
                         items(logs) { log ->
@@ -174,7 +174,7 @@ fun ChatPage(sessionId: String, onNavigateBack: () -> Unit) {
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showLogDrawer = false }) { Text("Close") }
+                TextButton(onClick = { showLogDrawer = false }) { Text("关闭") }
             }
         )
     }
@@ -204,7 +204,7 @@ fun MessageBubble(msg: ChatMessage) {
             Column(modifier = Modifier.padding(12.dp)) {
                 if (isTool && msg.toolName != null) {
                     Text(
-                        "Tool: ${msg.toolName} (${msg.status ?: ""})",
+                        "工具: ${msg.toolName} (${msg.status ?: ""})",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -245,16 +245,16 @@ fun ToolApprovalCard(
         modifier = Modifier.fillMaxWidth().padding(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Tool Approval Required", style = MaterialTheme.typography.titleSmall)
+            Text("需要工具执行确认", style = MaterialTheme.typography.titleSmall)
             Spacer(modifier = Modifier.height(8.dp))
             toolCalls.forEach { tc ->
                 Text("- ${tc.name}", style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
             }
             Spacer(modifier = Modifier.height(12.dp))
             Row {
-                Button(onClick = onApprove) { Text("Approve") }
+                Button(onClick = onApprove) { Text("批准") }
                 Spacer(modifier = Modifier.width(8.dp))
-                TextButton(onClick = onReject) { Text("Reject All") }
+                TextButton(onClick = onReject) { Text("全部拒绝") }
             }
         }
     }

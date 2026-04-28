@@ -8,6 +8,7 @@ class ProviderRegistry {
         register(ProviderType.ANTHROPIC, AnthropicProvider())
         register(ProviderType.GEMINI, GeminiProvider())
         register(ProviderType.OPENROUTER, OpenAICompatibleProvider(ProviderType.OPENROUTER, "https://openrouter.ai/api"))
+        register(ProviderType.DEEPSEEK, OpenAICompatibleProvider(ProviderType.DEEPSEEK, "https://api.deepseek.com"))
         register(ProviderType.OPENAI_COMPATIBLE, OpenAICompatibleProvider(ProviderType.OPENAI_COMPATIBLE, ""))
         register(ProviderType.FAKE, FakeProvider())
     }

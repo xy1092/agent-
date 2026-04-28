@@ -83,10 +83,10 @@ fun CalendarPage() {
     if (!loaded) loadEvents()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Calendar") }) },
+        topBar = { TopAppBar(title = { Text("日历") }) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "Add Event")
+                Icon(Icons.Filled.Add, contentDescription = "添加事件")
             }
         }
     ) { padding ->
@@ -96,8 +96,8 @@ fun CalendarPage() {
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
             ) {
-                Text("No upcoming events")
-                Text("Grant calendar permission to view events", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("暂无即将到来的事件")
+                Text("请授予日历权限以查看事件", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -125,14 +125,14 @@ fun CalendarPage() {
 
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = { Text("Add Calendar Event") },
+            title = { Text("添加日历事件") },
             text = {
                 Column {
-                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") })
-                    OutlinedTextField(value = startDate, onValueChange = { startDate = it }, label = { Text("Start (yyyy-MM-ddTHH:mm)") })
-                    OutlinedTextField(value = endDate, onValueChange = { endDate = it }, label = { Text("End (yyyy-MM-ddTHH:mm)") })
-                    OutlinedTextField(value = location, onValueChange = { location = it }, label = { Text("Location") })
-                    OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Description") })
+                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("标题") })
+                    OutlinedTextField(value = startDate, onValueChange = { startDate = it }, label = { Text("开始 (yyyy-MM-ddTHH:mm)") })
+                    OutlinedTextField(value = endDate, onValueChange = { endDate = it }, label = { Text("结束 (yyyy-MM-ddTHH:mm)") })
+                    OutlinedTextField(value = location, onValueChange = { location = it }, label = { Text("地点") })
+                    OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("描述") })
                 }
             },
             confirmButton = {
@@ -154,9 +154,9 @@ fun CalendarPage() {
                         loadEvents()
                     } catch (_: Exception) { }
                     showAddDialog = false
-                }) { Text("Add") }
+                }) { Text("添加") }
             },
-            dismissButton = { TextButton(onClick = { showAddDialog = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showAddDialog = false }) { Text("取消") } }
         )
     }
 }

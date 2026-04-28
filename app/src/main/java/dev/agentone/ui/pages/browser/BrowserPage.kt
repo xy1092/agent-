@@ -35,7 +35,7 @@ import dev.agentone.AgentOneApp
 fun BrowserPage() {
     var currentUrl by remember { mutableStateOf("https://www.google.com") }
     var inputUrl by remember { mutableStateOf(currentUrl) }
-    var pageTitle by remember { mutableStateOf("Browser") }
+    var pageTitle by remember { mutableStateOf("浏览器") }
     var webView by remember { mutableStateOf<WebView?>(null) }
 
     Scaffold(
@@ -44,7 +44,7 @@ fun BrowserPage() {
                 title = { Text(pageTitle, maxLines = 1) },
                 actions = {
                     IconButton(onClick = { webView?.reload() }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Filled.Refresh, contentDescription = "刷新")
                     }
                 }
             )
@@ -59,8 +59,8 @@ fun BrowserPage() {
                     onValueChange = { inputUrl = it },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    placeholder = { Text("Enter URL...") },
-                    label = { Text("URL") }
+                    placeholder = { Text("输入网址...") },
+                    label = { Text("网址") }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 IconButton(onClick = {
@@ -69,7 +69,7 @@ fun BrowserPage() {
                     inputUrl = url
                     webView?.loadUrl(url)
                 }) {
-                    Text("Go")
+                    Text("前往")
                 }
             }
 
@@ -82,7 +82,7 @@ fun BrowserPage() {
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 currentUrl = url ?: currentUrl
                                 inputUrl = url ?: inputUrl
-                                pageTitle = view?.title ?: url ?: "Browser"
+                                pageTitle = view?.title ?: url ?: "浏览器"
                             }
                         }
                         loadUrl(currentUrl)

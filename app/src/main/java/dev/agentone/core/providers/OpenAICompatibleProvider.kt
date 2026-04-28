@@ -140,6 +140,7 @@ open class OpenAICompatibleProvider(
     override fun defaultModels(): List<String> = when (type) {
         ProviderType.OPENAI -> listOf("gpt-4o", "gpt-4o-mini", "gpt-4-turbo")
         ProviderType.OPENROUTER -> listOf("openai/gpt-4o", "anthropic/claude-sonnet-4-6")
+        ProviderType.DEEPSEEK -> listOf("deepseek-chat", "deepseek-reasoner")
         ProviderType.OPENAI_COMPATIBLE -> listOf("default")
         else -> listOf("default")
     }
