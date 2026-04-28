@@ -17,41 +17,41 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF1A73E8),
+    primary = Color(0xFF6200EE),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFD3E3FD),
-    onPrimaryContainer = Color(0xFF041E49),
-    secondary = Color(0xFF5F6368),
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFE8EAED),
-    onSecondaryContainer = Color(0xFF202124),
-    surface = Color(0xFFF8F9FA),
-    onSurface = Color(0xFF202124),
-    surfaceVariant = Color(0xFFE8EAED),
-    onSurfaceVariant = Color(0xFF5F6368),
+    primaryContainer = Color(0xFFBB86FC),
+    onPrimaryContainer = Color(0xFF3700B3),
+    secondary = Color(0xFF03DAC6),
+    onSecondary = Color.Black,
+    secondaryContainer = Color(0xFFCF6679),
+    onSecondaryContainer = Color.White,
+    surface = Color(0xFFFDFDFD),
+    onSurface = Color(0xFF121212),
+    surfaceVariant = Color(0xFFF5F5F7),
+    onSurfaceVariant = Color(0xFF424242),
     background = Color.White,
-    onBackground = Color(0xFF202124),
-    error = Color(0xFFD93025),
+    onBackground = Color(0xFF121212),
+    error = Color(0xFFB00020),
     onError = Color.White
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFF8AB4F8),
-    onPrimary = Color(0xFF062E6F),
-    primaryContainer = Color(0xFF0842A0),
-    onPrimaryContainer = Color(0xFFD3E3FD),
-    secondary = Color(0xFFBDC1C6),
-    onSecondary = Color(0xFF303134),
-    secondaryContainer = Color(0xFF3C4043),
-    onSecondaryContainer = Color(0xFFE8EAED),
-    surface = Color(0xFF202124),
-    onSurface = Color(0xFFE8EAED),
-    surfaceVariant = Color(0xFF303134),
-    onSurfaceVariant = Color(0xFFBDC1C6),
-    background = Color(0xFF171717),
-    onBackground = Color(0xFFE8EAED),
-    error = Color(0xFFF28B82),
-    onError = Color(0xFF601410)
+    primary = Color(0xFFBB86FC), // Neon Purple
+    onPrimary = Color(0xFF121212),
+    primaryContainer = Color(0xFF3700B3),
+    onPrimaryContainer = Color(0xFFBB86FC),
+    secondary = Color(0xFF03DAC6), // Neon Cyan
+    onSecondary = Color(0xFF121212),
+    secondaryContainer = Color(0xFF018786),
+    onSecondaryContainer = Color(0xFF03DAC6),
+    surface = Color(0xFF1E1E2E), // Deep Blue-Gray Surface
+    onSurface = Color(0xFFE1E1E1),
+    surfaceVariant = Color(0xFF2B2B3D),
+    onSurfaceVariant = Color(0xFFB0B0B0),
+    background = Color(0xFF0F0F1A), // Deep Dark Background
+    onBackground = Color(0xFFF0F0F0),
+    error = Color(0xFFCF6679),
+    onError = Color(0xFF121212)
 )
 
 @Composable
