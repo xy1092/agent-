@@ -105,8 +105,8 @@ fun SettingsPage() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("自动批准低风险工具")
-                        Text("读取操作无需确认即可执行", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("自动执行工具")
+                        Text("读取和写入操作无需确认即可执行", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = autoApprove,

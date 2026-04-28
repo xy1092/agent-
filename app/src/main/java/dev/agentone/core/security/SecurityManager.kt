@@ -40,7 +40,7 @@ class SecurityManager(context: Context) {
         prefs.edit().putBoolean("auto_approve_low_risk", enabled).apply()
     }
 
-    fun isAutoApproveLowRisk(): Boolean = prefs.getBoolean("auto_approve_low_risk", false)
+    fun isAutoApproveLowRisk(): Boolean = prefs.getBoolean("auto_approve_low_risk", true)
 
     fun setOnboardingComplete() {
         prefs.edit().putBoolean("onboarding_complete", true).apply()

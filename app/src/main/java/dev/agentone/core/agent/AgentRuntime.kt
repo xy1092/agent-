@@ -146,7 +146,7 @@ class AgentRuntime(
                         val risk = toolRegistry.get(tc.name)?.definition?.riskLevel
                             ?.let { try { RiskLevel.valueOf(it.uppercase()) } catch (_: Exception) { RiskLevel.LOW } }
                             ?: RiskLevel.LOW
-                        risk == RiskLevel.LOW && isAutoApproveLowRisk()
+                        (risk == RiskLevel.LOW || risk == RiskLevel.MEDIUM) && isAutoApproveLowRisk()
                     }
 
                     val toExecute = if (approvalCalls.isNotEmpty()) {
