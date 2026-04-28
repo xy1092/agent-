@@ -108,7 +108,7 @@ fun MemoryPage() {
                 }
             } else {
                 LazyColumn {
-                    items(list, key = { it.id }) { entry ->
+                    items(count = list.size, key = { list[it].id }) { index -> val entry = list[index]
                         Card(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
                         ) {

@@ -33,7 +33,7 @@ class CalendarTool(private val contentResolver: ContentResolver) {
         override suspend fun execute(request: ToolExecutionRequest): ToolResult {
             try {
                 val args = json.parseToJsonElement(request.argumentsJson).jsonObject
-                val daysAhead = args["daysAhead"]?.jsonPrimitive?.int ?: 7
+                val daysAhead = args["daysAhead"]?.jsonPrimitive?.content?.toIntOrNull() ?: 7
 
                 val now = System.currentTimeMillis()
                 val end = now + daysAhead * 24 * 60 * 60 * 1000L

@@ -52,7 +52,7 @@ open class OpenAICompatibleProvider(
             .url("$endpoint/v1/chat/completions")
             .addHeader("Authorization", "Bearer $apiKey")
             .addHeader("Content-Type", "application/json")
-            .post(requestBody.toRequestBody("application/json".toMediaType()))
+            .post(requestBody.toString().toRequestBody("application/json".toMediaType()))
             .build()
 
         val response = client.newCall(httpRequest).execute()
@@ -114,7 +114,7 @@ open class OpenAICompatibleProvider(
                             if (toolCallsDelta != null) {
                                 for (tc in toolCallsDelta) {
                                     val tcObj = tc.jsonObject
-                                    val idx = tcObj["index"]?.jsonPrimitive?.int ?: 0
+                                    val idx = tcObj["index"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
                                     val builder = accumulatedToolCalls.getOrPut(idx) { ToolCallBuilder() }
                                     tcObj["id"]?.jsonPrimitive?.content?.let { builder.id = it }
                                     tcObj["function"]?.jsonObject?.let { fn ->

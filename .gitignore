@@ -16,3 +16,5 @@ local.properties
 *.keystore
 .env
 *.log
+AgentOne-v0.1.0-debug.apk
+local.properties

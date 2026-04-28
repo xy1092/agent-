@@ -6,10 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -27,6 +24,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.agentone.navigation.Screen
 import dev.agentone.navigation.SubScreen
+import dev.agentone.navigation.bottomNavItems
 import dev.agentone.ui.pages.browser.BrowserPage
 import dev.agentone.ui.pages.calendar.CalendarPage
 import dev.agentone.ui.pages.chat.ChatPage
@@ -56,24 +54,24 @@ fun AgentOneMain() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    val showBottomBar = currentDestination?.route in Screen.entries.map { it.route }
+    val showBottomBar = currentDestination?.route in bottomNavItems.map { it.route }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar {
-                    Screen.entries.forEach { screen ->
+                    bottomNavItems.forEach { screen ->
+                        val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
                         NavigationBarItem(
                             icon = {
                                 Icon(
-                                    imageVector = if (currentDestination?.hierarchy?.any { it.route == screen.route } == true)
-                                        screen.selectedIcon else screen.icon,
+                                    imageVector = if (selected) screen.selectedIcon else screen.icon,
                                     contentDescription = screen.label
                                 )
                             },
                             label = { Text(screen.label) },
-                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                            selected = selected,
                             onClick = {
                                 navController.navigate(screen.route) {
                                     popUpTo(navController.graph.findStartDestination().id) { saveState = true }

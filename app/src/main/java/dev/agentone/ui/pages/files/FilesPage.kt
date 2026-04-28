@@ -98,7 +98,7 @@ fun FilesPage() {
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
-                items(currentFiles.toList(), key = { it.path }) { entry ->
+                items(count = currentFiles.size, key = { currentFiles[it].path }) { index -> val entry = currentFiles[index]
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()

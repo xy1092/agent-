@@ -79,7 +79,7 @@ fun RemindersPage() {
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
-                items(list, key = { it.id }) { reminder ->
+                items(count = list.size, key = { list[it].id }) { index -> val reminder = list[index]
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
                     ) {

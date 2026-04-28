@@ -36,6 +36,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,7 +54,7 @@ import dev.agentone.core.model.ProviderConfig
 @Composable
 fun SessionsPage(onSessionClick: (String) -> Unit) {
     val viewModel: SessionsViewModel = viewModel()
-    val sessions by viewModel.sessions
+    val sessions by viewModel.sessions.collectAsState()
     var showNewDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf<ChatSession?>(null) }
 
@@ -76,7 +77,8 @@ fun SessionsPage(onSessionClick: (String) -> Unit) {
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
-                items(sessions, key = { it.id }) { session ->
+                items(count = sessions.size, key = { sessions[it].id }) { index ->
+                    val session = sessions[index]
                     SessionCard(
                         session = session,
                         onClick = { onSessionClick(session.id) },

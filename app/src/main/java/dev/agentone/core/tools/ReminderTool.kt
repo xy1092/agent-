@@ -29,7 +29,7 @@ class ReminderTool(private val reminderDao: ReminderDao) {
                 val args = json.parseToJsonElement(request.argumentsJson).jsonObject
                 val title = args["title"]?.jsonPrimitive?.content ?: return error(request, "INVALID_ARGUMENTS", "Missing title")
                 val note = args["note"]?.jsonPrimitive?.content
-                val dueInMinutes = args["dueInMinutes"]?.jsonPrimitive?.int
+                val dueInMinutes = args["dueInMinutes"]?.jsonPrimitive?.content?.toIntOrNull()
                 val dueAt = dueInMinutes?.let { System.currentTimeMillis() + it * 60 * 1000L }
 
                 val reminder = ReminderEntity(

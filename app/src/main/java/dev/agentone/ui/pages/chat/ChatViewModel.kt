@@ -54,51 +54,51 @@ class ChatViewModel(private val sessionId: String) : ViewModel() {
     }
 
     fun sendMessage(text: String) {
-        val session = _session.value ?: return
-        val providerConfig = db.providerConfigDao().getById(session.providerId) ?: return
-
-        // Resolve API key from secure storage
-        val apiKey = security.getApiKey(session.providerId) ?: ""
-        val resolvedConfig = providerConfig.copy(encryptedApiKeyRef = apiKey)
-
-        _isRunning.value = true
-        _replyText.value = ""
-
-        val filesDir = File(app.filesDir, "workspace")
-        filesDir.mkdirs()
-
-        val appContext = ToolAppContext(
-            filesDir = filesDir,
-            contentResolver = app.contentResolver
-        )
-
-        val runtime = AgentRuntime(
-            providerRegistry = app.providerRegistry,
-            toolRegistry = app.toolRegistry,
-            promptBuilder = app.promptBuilder,
-            messageDao = db.messageDao(),
-            agentRunDao = db.agentRunDao(),
-            agentStepLogDao = db.agentStepLogDao(),
-            memoryEntryDao = db.memoryEntryDao(),
-            appContext = appContext,
-            scope = viewModelScope,
-            isAutoApproveLowRisk = { security.isAutoApproveLowRisk() }
-        )
-
-        agentRuntime = runtime
-
         viewModelScope.launch {
-            runtime.events.collect { event ->
-                handleEvent(event)
+            val session = _session.value ?: return@launch
+            val providerConfig = db.providerConfigDao().getById(session.providerId) ?: return@launch
+
+            // Resolve API key from secure storage
+            val apiKey = security.getApiKey(session.providerId) ?: ""
+            val resolvedConfig = providerConfig.copy(encryptedApiKeyRef = apiKey)
+
+            _isRunning.value = true
+            _replyText.value = ""
+
+            val filesDir = File(app.filesDir, "workspace")
+            filesDir.mkdirs()
+
+            val appContext = ToolAppContext(
+                filesDir = filesDir,
+                contentResolver = app.contentResolver
+            )
+
+            val runtime = AgentRuntime(
+                providerRegistry = app.providerRegistry,
+                toolRegistry = app.toolRegistry,
+                promptBuilder = app.promptBuilder,
+                messageDao = db.messageDao(),
+                agentRunDao = db.agentRunDao(),
+                agentStepLogDao = db.agentStepLogDao(),
+                memoryEntryDao = db.memoryEntryDao(),
+                appContext = appContext,
+                scope = viewModelScope,
+                isAutoApproveLowRisk = { security.isAutoApproveLowRisk() }
+            )
+
+            agentRuntime = runtime
+
+            launch {
+                runtime.events.collect { event ->
+                    handleEvent(event)
+                }
             }
-        }
 
-        runtime.runAgent(session, resolvedConfig, text)
+            runtime.runAgent(session, resolvedConfig, text)
 
-        // Auto-generate title if the session is new
-        if (session.title == "New Session" && _messages.value.size <= 1) {
-            val title = if (text.length > 50) text.take(50) + "..." else text
-            viewModelScope.launch {
+            // Auto-generate title if the session is new
+            if (session.title == "New Session" && _messages.value.size <= 1) {
+                val title = if (text.length > 50) text.take(50) + "..." else text
                 db.sessionDao().upsert(session.copy(title = title, updatedAt = System.currentTimeMillis()))
             }
         }

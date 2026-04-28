@@ -1,7 +1,7 @@
 package dev.agentone.core.agent
 
-import dev.agentone.core.tools.ToolCall
-import dev.agentone.core.tools.ToolResult
+import dev.agentone.core.providers.ToolCall
+import dev.agentone.core.providers.ToolResult
 
 sealed interface AgentEvent {
     data class RunStarted(val runId: String) : AgentEvent

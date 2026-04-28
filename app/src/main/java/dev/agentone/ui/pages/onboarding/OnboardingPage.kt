@@ -21,7 +21,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -35,6 +37,7 @@ import java.util.UUID
 fun OnboardingPage(onComplete: () -> Unit) {
     val app = AgentOneApp.instance
     val security = app.securityManager
+    val scope = rememberCoroutineScope()
     val providers = listOf(
         ProviderType.OPENAI to "OpenAI",
         ProviderType.ANTHROPIC to "Anthropic",
@@ -132,7 +135,9 @@ fun OnboardingPage(onComplete: () -> Unit) {
                     encryptedApiKeyRef = if (type != ProviderType.FAKE) "stored" else null,
                     enabled = true
                 )
-                app.database.providerConfigDao().upsert(config)
+                scope.launch {
+                    app.database.providerConfigDao().upsert(config)
+                }
                 if (type != ProviderType.FAKE && apiKey.isNotBlank()) {
                     security.saveApiKey(type.name.lowercase(), apiKey)
                 }

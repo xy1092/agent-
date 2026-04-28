@@ -36,6 +36,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,11 +53,11 @@ import dev.agentone.core.providers.ToolCall
 @Composable
 fun ChatPage(sessionId: String, onNavigateBack: () -> Unit) {
     val viewModel: ChatViewModel = viewModel(factory = ChatViewModel.Factory(sessionId))
-    val session by viewModel.session
-    val messages by viewModel.messages
-    val isRunning by viewModel.isRunning
-    val pendingApprovals by viewModel.pendingApprovals
-    val replyText by viewModel.replyText
+    val session by viewModel.session.collectAsState()
+    val messages by viewModel.messages.collectAsState()
+    val isRunning by viewModel.isRunning.collectAsState()
+    val pendingApprovals by viewModel.pendingApprovals.collectAsState()
+    val replyText by viewModel.replyText.collectAsState()
     var inputText by remember { mutableStateOf("") }
     var showLogDrawer by remember { mutableStateOf(false) }
 
@@ -85,7 +86,7 @@ fun ChatPage(sessionId: String, onNavigateBack: () -> Unit) {
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 state = listState
             ) {
-                items(messages, key = { it.id }) { msg ->
+                items(count = messages.size, key = { messages[it].id }) { index -> val msg = messages[index]
                     MessageBubble(msg)
                 }
 
@@ -155,7 +156,7 @@ fun ChatPage(sessionId: String, onNavigateBack: () -> Unit) {
             onDismissRequest = { showLogDrawer = false },
             title = { Text("Agent Log") },
             text = {
-                val logs by viewModel.agentLogs
+                val logs by viewModel.agentLogs.collectAsState()
                 if (logs.isEmpty()) {
                     Text("No log entries yet.")
                 } else {
