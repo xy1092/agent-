@@ -87,7 +87,7 @@ fun AgentOneMain() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = SubScreen.Onboarding.route,
+            startDestination = if (AgentOneApp.instance.securityManager.isOnboardingComplete()) Screen.Sessions.route else SubScreen.Onboarding.route,
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(SubScreen.Onboarding.route) {

@@ -49,6 +49,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.agentone.AgentOneApp
 import dev.agentone.core.model.ChatSession
 import dev.agentone.core.model.ProviderConfig
+import dev.agentone.core.providers.ProviderType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -174,6 +175,9 @@ fun NewSessionDialog(
 ) {
     val db = AgentOneApp.instance.database
     val registry = AgentOneApp.instance.providerRegistry
+    val security = AgentOneApp.instance.securityManager
+
+    // Build provider list from all registered types, merging with saved DB configs
     var availableProviders by remember { mutableStateOf<List<ProviderConfig>>(emptyList()) }
     var selectedProviderId by remember { mutableStateOf("fake") }
     var selectedModel by remember { mutableStateOf("fake-v1") }
@@ -181,11 +185,43 @@ fun NewSessionDialog(
     var expanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        availableProviders = db.providerConfigDao().getEnabled()
-        if (availableProviders.isNotEmpty()) {
-            selectedProviderId = availableProviders.first().id
+        val dbConfigs = db.providerConfigDao().getEnabled()
+        val dbMap = dbConfigs.associateBy { it.id }
+
+        // Ensure all registered providers have a config entry
+        val allProviders = registry.allTypes().filter { it != ProviderType.FAKE || dbMap.containsKey("fake") }.map { type ->
+            val id = type.name.lowercase()
+            dbMap[id] ?: ProviderConfig(
+                id = id,
+                type = type.name,
+                displayName = when (type) {
+                    ProviderType.OPENAI -> "OpenAI"
+                    ProviderType.ANTHROPIC -> "Anthropic"
+                    ProviderType.GEMINI -> "Gemini"
+                    ProviderType.DEEPSEEK -> "DeepSeek"
+                    ProviderType.OPENROUTER -> "OpenRouter"
+                    ProviderType.OPENAI_COMPATIBLE -> "OpenAI Compatible"
+                    ProviderType.FAKE -> "Fake (测试)"
+                },
+                endpoint = when (type) {
+                    ProviderType.OPENAI -> "https://api.openai.com"
+                    ProviderType.ANTHROPIC -> "https://api.anthropic.com"
+                    ProviderType.GEMINI -> "https://generativelanguage.googleapis.com"
+                    ProviderType.DEEPSEEK -> "https://api.deepseek.com"
+                    ProviderType.OPENROUTER -> "https://openrouter.ai/api"
+                    else -> ""
+                },
+                enabled = true
+            ).also { newConfig ->
+                db.providerConfigDao().upsert(newConfig)
+            }
+        }
+
+        availableProviders = allProviders
+        if (allProviders.isNotEmpty()) {
+            selectedProviderId = allProviders.first().id
             try {
-                selectedModel = registry.getByTypeString(availableProviders.first().type).defaultModels().firstOrNull() ?: "default"
+                selectedModel = registry.getByTypeString(allProviders.first().type).defaultModels().firstOrNull() ?: "default"
             } catch (_: Exception) { }
         }
     }
@@ -197,6 +233,17 @@ fun NewSessionDialog(
             catch (_: Exception) { listOf("default") }
         } else listOf("default")
     }
+
+    // Auto-select first model when provider changes
+    LaunchedEffect(selectedProviderId) {
+        if (defaultModels.isNotEmpty()) {
+            selectedModel = defaultModels.first()
+        }
+        customModel = ""
+    }
+
+    val selectedProviderName = availableProviders.find { it.id == selectedProviderId }?.displayName ?: selectedProviderId
+    val hasApiKey = security.getApiKey(selectedProviderId) != null || selectedProviderId == "fake"
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -210,7 +257,7 @@ fun NewSessionDialog(
                     onExpandedChange = { expanded = it }
                 ) {
                     OutlinedTextField(
-                        value = availableProviders.find { it.id == selectedProviderId }?.displayName ?: selectedProviderId,
+                        value = selectedProviderName,
                         onValueChange = {},
                         readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -227,6 +274,15 @@ fun NewSessionDialog(
                             )
                         }
                     }
+                }
+
+                if (!hasApiKey && selectedProviderId != "fake") {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "⚠ 未配置 API Key，请在设置中配置",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
